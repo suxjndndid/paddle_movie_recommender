@@ -10,6 +10,7 @@ import argparse
 import paddle
 from paddle.optimizer import Adam
 from paddle.nn import MSELoss
+from tqdm import tqdm
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -33,6 +34,19 @@ def parse_args():
     parser.add_argument("--use_features", action="store_true", default=True)
     parser.add_argument("--use_poster", action="store_true", default=False)
     parser.add_argument("--save_dir", type=str, default=None)
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="gpu",
+        choices=["cpu", "gpu"],
+        help="训练设备: cpu 或 gpu",
+    )
+    parser.add_argument(
+        "--gpu_id",
+        type=int,
+        default=0,
+        help="GPU设备ID (当device=gpu时有效)",
+    )
 
     return parser.parse_args()
 
@@ -87,6 +101,14 @@ def main():
     print("电影推荐系统 - 模型训练")
     print("=" * 60)
 
+    if args.device == "gpu" and paddle.is_compiled_with_cuda():
+        device = f"gpu:{args.gpu_id}"
+        paddle.set_device(device)
+        print(f"使用GPU设备: {device}")
+    else:
+        paddle.set_device("cpu")
+        print(f"使用CPU设备")
+
     # 创建数据加载器
     train_loader, test_loader, train_dataset, test_dataset = create_data_loaders(
         args.data_dir,
@@ -120,6 +142,7 @@ def main():
     print(f"  - 学习率: {args.learning_rate}")
     print(f"  - 使用特征: {args.use_features}")
     print(f"  - 使用海报: {args.use_poster}")
+    print(f"  - 设备: {args.device}")
 
     # 训练循环
     print("\n开始训练...")

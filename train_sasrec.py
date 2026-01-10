@@ -39,6 +39,19 @@ def parse_args():
     parser.add_argument(
         "--optimizer", type=str, default="AdamW", help="优化器: Adam|AdamW|Adagrad"
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="gpu",
+        choices=["cpu", "gpu"],
+        help="训练设备: cpu 或 gpu",
+    )
+    parser.add_argument(
+        "--gpu_id",
+        type=int,
+        default=0,
+        help="GPU设备ID (当device=gpu时有效)",
+    )
 
     return parser.parse_args()
 
@@ -49,6 +62,14 @@ def train(args):
     print("=" * 60)
     print("SASRec模型训练")
     print("=" * 60)
+
+    if args.device == "gpu" and paddle.is_compiled_with_cuda():
+        device = f"gpu:{args.gpu_id}"
+        paddle.set_device(device)
+        print(f"使用GPU设备: {device}")
+    else:
+        paddle.set_device("cpu")
+        print(f"使用CPU设备")
 
     os.makedirs(args.save_dir, exist_ok=True)
 
@@ -65,6 +86,7 @@ def train(args):
     print(f"  物品数量: {dataset.num_items}")
     print(f"  最大物品ID: {max_item_id}")
     print(f"  序列最大长度: {args.max_len}")
+    print(f"  设备: {args.device}")
 
     model = SASRec(
         item_num=max_item_id,
