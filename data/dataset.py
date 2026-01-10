@@ -176,6 +176,36 @@ class MovieLensDataset(Dataset):
             "original_movie_id": movie_id,
         }
 
+    def get_all_movie_features(self):
+        """获取所有电影的特征矩阵，用于推荐评估"""
+        n_movies = len(self.movie_id_map) + 1  # +1 for padding
+        n_features = self.n_genres + 1  # year + genres
+
+        features = np.zeros((n_movies, n_features), dtype="float32")
+
+        for movie_id, idx in self.movie_id_map.items():
+            if movie_id in self.movie_features:
+                mfeat = self.movie_features[movie_id]
+                year_norm = (mfeat["release_year"] - 1920) / (2000 - 1920)
+                features[idx] = np.array([year_norm] + mfeat["genres"], dtype="float32")
+
+        return features
+
+    def get_all_poster_features(self):
+        """获取所有电影的海报特征矩阵，用于推荐评估"""
+        n_movies = len(self.movie_id_map) + 1  # +1 for padding
+        poster_dim = 2048  # ResNet50 feature dimension
+
+        features = np.zeros((n_movies, poster_dim), dtype="float32")
+
+        for movie_id, idx in self.movie_id_map.items():
+            if movie_id in self.poster_features:
+                features[idx] = np.array(
+                    self.poster_features[movie_id], dtype="float32"
+                )
+
+        return features
+
 
 class InferenceDataset(Dataset):
     """推理数据集（用于生成推荐）"""

@@ -170,12 +170,24 @@ def main():
 
         # 评估
         all_movie_idxs = list(range(1, train_dataset.n_movies))
+
+        if args.use_features:
+            movie_features_all = train_dataset.get_all_movie_features()
+            poster_features_all = (
+                train_dataset.get_all_poster_features() if args.use_poster else None
+            )
+        else:
+            movie_features_all = None
+            poster_features_all = None
+
         metrics = evaluate_recommender(
             model,
             test_loader,
             all_movie_idxs,
             use_features=args.use_features,
             use_poster=args.use_poster,
+            movie_features_all=movie_features_all,
+            poster_features_all=poster_features_all,
         )
 
         print(f"\nEpoch {epoch}/{args.epochs}:")
