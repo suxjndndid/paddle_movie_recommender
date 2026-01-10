@@ -107,7 +107,7 @@ class MovieRecommender:
 
         # 加载电影特征
         self.movie_features = {}
-        genre_cols = [c for c in self.movies.columns if c.startswith("genre_")]
+        genre_cols = [c for c in self.movies.columns if c.startswith("genre_") and c != "genre_list"]
         self.n_genres = len(genre_cols)
 
         for _, row in self.movies.iterrows():
@@ -190,6 +190,14 @@ class MovieRecommender:
         Args:
             method: 'features' 基于用户属性, 'ratings' 基于评分行为
         """
+        # 检查缓存文件是否存在
+        output_file = os.path.join(self.data_dir, "processed", "user_similarity.pkl")
+        if os.path.exists(output_file):
+            print(f"用户相似度矩阵已存在，跳过计算: {output_file}")
+            with open(output_file, "rb") as f:
+                self.user_similarity_matrix = pickle.load(f)
+            return
+
         print(f"计算用户相似度 (method={method})...")
 
         if method == "features":
@@ -255,6 +263,14 @@ class MovieRecommender:
         Args:
             method: 'features' 基于内容特征, 'poster' 基于海报特征
         """
+        # 检查缓存文件是否存在
+        output_file = os.path.join(self.data_dir, "processed", "movie_similarity.pkl")
+        if os.path.exists(output_file):
+            print(f"电影相似度矩阵已存在，跳过计算: {output_file}")
+            with open(output_file, "rb") as f:
+                self.movie_similarity_matrix = pickle.load(f)
+            return
+
         print(f"计算电影相似度 (method={method})...")
 
         movie_ids = list(self.movie_features.keys())
