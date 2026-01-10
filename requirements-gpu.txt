@@ -1,7 +1,7 @@
 # paddlepaddle-gpu>=2.0.0
 # 注意：PaddlePaddle 3.x 需要指定CUDA版本
 # CUDA 11.x: paddlepaddle-gpu==3.2.2 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
-# CUDA 12.x: paddlepaddle-gpu==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cu129/
+# CUDA 12.x: paddlepaddle-gpu==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cu130/
 paddlepaddle-gpu==3.2.2 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
 pandas>=1.0.0
 numpy>=1.19.0
