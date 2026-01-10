@@ -1,8 +1,15 @@
-# paddlepaddle-gpu>=2.0.0
-# 注意：PaddlePaddle 3.x 需要指定CUDA版本
-# CUDA 11.x: paddlepaddle-gpu==3.2.2 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
-# CUDA 12.x: paddlepaddle-gpu==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cu130/
-paddlepaddle-gpu==3.2.2 -f https://www.paddlepaddle.org.cn/whl/linux/mkl/avx/stable.html
+# 注意：PaddlePaddle GPU版本需要单独安装，不能放在requirements.txt中
+# 请先运行以下命令安装GPU版本，再安装其他依赖：
+#
+# 安装paddlepaddle-gpu (CUDA 12.x):
+#   python -m pip install paddlepaddle-gpu==3.2.2 -i https://www.paddlepaddle.org.cn/packages/stable/cu130/
+#
+# 然后安装其他依赖:
+#   pip install pandas numpy wget Pillow tqdm scikit-learn matplotlib seaborn
+#
+# 或者使用requirements-cpu.txt (本地开发):
+#   pip install -r requirements-cpu.txt
+
 pandas>=1.0.0
 numpy>=1.19.0
 wget>=3.2
