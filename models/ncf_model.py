@@ -17,6 +17,7 @@ class GMF(nn.Layer):
         super(GMF, self).__init__()
         self.user_embed = nn.Embedding(num_users, embed_dim)
         self.item_embed = nn.Embedding(num_items, embed_dim)
+        self.embed_dim = embed_dim
 
         self._init_weights()
 
@@ -34,7 +35,7 @@ class GMF(nn.Layer):
 
         # 输出层
         output = paddle.sum(element_product, axis=1, keepdim=True)
-        return output
+        return output  # [batch_size, 1]
 
 
 class MLP(nn.Layer):
@@ -102,7 +103,7 @@ class NCF(nn.Layer):
 
         # GMF部分
         self.gmf = GMF(num_users, num_items, gmf_embed_dim)
-        self.gmf_output_dim = gmf_embed_dim
+        self.gmf_output_dim = 1  # GMF输出是逐元素乘积的和，维度为1
 
         # MLP部分
         self.mlp = MLP(num_users, num_items, mlp_embed_dim, mlp_layers)
@@ -135,21 +136,23 @@ class NCF(nn.Layer):
         movie_features=None,
         poster_features=None,
     ):
-        # GMF路径
+        # GMF路径 - 输出 [batch_size, 1]
         gmf_out = self.gmf(user_ids, item_ids)
-        gmf_out = paddle.reshape(gmf_out, [-1, self.gmf_output_dim])
 
-        # MLP路径
+        # MLP路径 - 输出 [batch_size, 16]
         mlp_out = self.mlp(user_ids, item_ids)
 
-        # 融合
+        # 融合 GMF [batch_size, 1] + MLP [batch_size, 16] = [batch_size, 17]
         fusion_input = paddle.concat([gmf_out, mlp_out], axis=1)
 
         # 添加特征
         if self.use_features:
-            fusion_input = paddle.concat(
-                [fusion_input, user_features, movie_features], axis=1
-            )
+            tensors_to_concat = [fusion_input]
+            if user_features is not None:
+                tensors_to_concat.append(user_features)
+            if movie_features is not None:
+                tensors_to_concat.append(movie_features)
+            fusion_input = paddle.concat(tensors_to_concat, axis=1)
 
         # 添加海报特征
         if self.use_poster and poster_features is not None:
