@@ -154,6 +154,30 @@ class SASRecDataset:
         self.max_len = max_len
         self.batch_size = batch_size
 
+        # 计算训练批次数 (使用采样)
+        self.num_batches = max(100, self.num_users // self.batch_size)
+
+    def __len__(self):
+        """返回训练批次数"""
+        return self.num_batches
+
+    def __iter__(self):
+        """迭代器，支持 DataLoader 使用"""
+        for _ in range(self.num_batches):
+            users, seqs, pos, neg = sample_sequence(
+                self.user_train,
+                self.num_users,
+                self.num_items,
+                self.max_len,
+                self.batch_size,
+            )
+            yield (
+                paddle.to_tensor(users, dtype="int64"),
+                paddle.to_tensor(seqs, dtype="int64"),
+                paddle.to_tensor(pos, dtype="int64"),
+                paddle.to_tensor(neg, dtype="int64"),
+            )
+
     def next_batch(self):
         """获取下一个批次"""
         users, seqs, pos, neg = sample_sequence(

@@ -63,13 +63,20 @@ def train(args):
     print("SASRec模型训练")
     print("=" * 60)
 
-    if args.device == "gpu" and paddle.is_compiled_with_cuda():
-        device = f"gpu:{args.gpu_id}"
-        paddle.set_device(device)
-        print(f"使用GPU设备: {device}")
-    else:
-        paddle.set_device("cpu")
-        print(f"使用CPU设备")
+    # 设置设备
+    try:
+        if (
+            args.device == "gpu"
+            and hasattr(paddle, "is_compiled_with_cuda")
+            and paddle.is_compiled_with_cuda()
+        ):
+            paddle.set_device(f"gpu:{args.gpu_id}")
+            print(f"使用GPU设备: {args.gpu_id}")
+        else:
+            paddle.set_device("cpu")
+            print("使用CPU设备")
+    except Exception:
+        print("使用CPU设备")
 
     os.makedirs(args.save_dir, exist_ok=True)
 
@@ -133,9 +140,8 @@ def train(args):
         epoch_loss = 0
         num_batches = 0
 
-        while num_batches < 100:
-            users, seqs, pos, neg = dataset.next_batch()
-
+        # 使用 DataLoader 或迭代器进行训练
+        for batch_idx, (users, seqs, pos, neg) in enumerate(dataset):
             pos_logits, neg_logits = model(seqs, pos, neg)
 
             targets = (pos != 0).astype(dtype="float32")
@@ -143,7 +149,7 @@ def train(args):
 
             if args.l2_emb > 0:
                 for param in model.item_emb.parameters():
-                    loss += args.l2_emb * paddle.norm(param)
+                    loss += args.l2_emb * paddle.linalg.norm(param)
 
             loss.backward()
             optim.step()
