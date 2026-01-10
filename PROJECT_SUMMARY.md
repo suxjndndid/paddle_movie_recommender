@@ -7,16 +7,21 @@ paddle_movie_recommender/
 ├── data/                          # 数据模块
 │   ├── __init__.py
 │   ├── download_and_process.py    # 数据下载和预处理
-│   └── dataset.py                 # 数据集定义
+│   ├── dataset.py                 # 数据集定义
+│   └── sequence_dataset.py        # SASRec序列数据处理
 ├── models/                        # 模型模块
 │   ├── __init__.py
 │   ├── ncf_model.py               # NCF模型（GMF + MLP + 特征融合）
+│   ├── sasrec_model.py            # SASRec序列推荐模型
 │   └── poster_feature.py          # 海报特征提取（ResNet50）
 ├── evaluation/                    # 评估模块
 │   ├── __init__.py
 │   └── evaluator.py               # 评估指标（MAE, RMSE, NDCG等）
+├── scripts/                       # 脚本
+│   └── test_sasrec.py             # SASRec测试脚本
 ├── recommender.py                 # 推荐系统主程序
-├── train.py                       # 训练脚本
+├── train.py                       # NCF训练脚本
+├── train_sasrec.py                # SASRec训练脚本
 ├── main.py                        # 入口脚本
 ├── README.md                      # 项目说明文档
 ├── requirements.txt               # 依赖列表
@@ -33,6 +38,7 @@ paddle_movie_recommender/
 | **热门推荐** | ✅ 实现 | 基于评分频率选择热门电影 |
 | **新品推荐** | ✅ 实现 | 基于首映时间推荐新电影 |
 | **个性化推荐** | ✅ 实现 | 基于NCF模型进行个性化推荐 |
+| **SASRec序列推荐** | ✅ 实现 | 基于Transformer的序列推荐 |
 | **混合推荐** | ✅ 实现 | 按2:3:5比例混合三种推荐 |
 | **相似用户推荐** | ✅ 实现 | 基于用户特征的余弦相似度 |
 | **相似电影推荐** | ✅ 实现 | 基于内容和海报的相似度 |
@@ -60,6 +66,7 @@ paddle_movie_recommender/
 
 ```bash
 cd /var/home/yimo/Repos/PaddleRec/projects/paddle_movie_recommender
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -78,11 +85,11 @@ python main.py
 ### 3. 模型训练
 
 ```bash
-# 基础训练
+# NCF模型训练
 python train.py --epochs 10 --batch_size 256
 
-# 使用海报特征训练
-python train.py --epochs 10 --use_poster True
+# SASRec序列推荐训练
+python train_sasrec.py --epochs 20 --batch_size 64 --max_len 50
 ```
 
 ### 4. 测试推荐
@@ -91,10 +98,11 @@ python train.py --epochs 10 --use_poster True
 python recommender.py
 ```
 
-### 5. 查看完整文档
+### 5. SASRec模型测试
 
 ```bash
-jupyter notebook docs/main.ipynb
+python models/sasrec_model.py
+python data/sequence_dataset.py
 ```
 
 ## 四、核心代码说明
@@ -118,6 +126,23 @@ NCF (Neural Collaborative Filtering)
 │   └── Poster Features (2048维)
 │
 └── Output Layer [64, 32, 1]
+```
+
+### SASRec模型结构
+
+```
+SASRec (Self-Attentive Sequential Recommendation)
+├── Item Embedding (64维, 包含padding 0)
+├── Position Embedding (64维, 最大长度50)
+│
+├── Transformer Encoder
+│   ├── Multi-Head Self-Attention (2 heads)
+│   ├── Feed-Forward Network
+│   └── Layer Normalization
+│
+└── Output Layer
+    ├── 训练模式: 正负样本对比学习
+    └── 推理模式: 预测下一个物品
 ```
 
 ### 推荐路径比例
@@ -147,18 +172,20 @@ NCF (Neural Collaborative Filtering)
 
 根据模型设计和数据集特点，预期达到的性能：
 
-- **MAE**: 0.70 - 0.80
-- **RMSE**: 0.90 - 1.00
-- **Accuracy**: 68% - 75%
-- **NDCG@10**: 0.40 - 0.50
+- **NCF MAE**: 0.70 - 0.80
+- **NCF RMSE**: 0.90 - 1.00
+- **NCF Accuracy**: 68% - 75%
+- **SASRec Hit@10**: 0.05 - 0.10 (20 epochs)
+- **SASRec NDCG@10**: 0.03 - 0.08 (20 epochs)
 
 ## 七、加分项实现情况
 
 | 加分项 | 状态 | 说明 |
 |--------|------|------|
-| 数据集扩充 | ⚠️ 部分 | 提取了首映年份，使用了邮编 |
+| 数据集扩充 | ✅ 实现 | 提取了首映年份，使用了邮编 |
 | 海报数据 | ⚠️ 部分 | 约40%覆盖率 |
 | 多模态特征 | ✅ 实现 | 海报视觉特征融合 |
+| SASRec序列推荐 | ✅ 实现 | Transformer-based序列推荐 |
 | 本地版本 | ✅ 实现 | 完全本地运行 |
 
 ## 八、注意事项
@@ -166,9 +193,12 @@ NCF (Neural Collaborative Filtering)
 1. **海报数据**：MovieLens 1M不包含海报数据，需要额外下载MovieLens Poster Dataset
 2. **GPU支持**：海报特征提取推荐使用GPU加速
 3. **首次运行**：需要下载约200MB的数据，请耐心等待
+4. **Python版本**：推荐使用Python 3.9，3.14+可能不兼容PaddlePaddle
+5. **SASRec训练**：建议20+ epochs以获得更好的性能
 
 ## 九、参考文档
 
 - MovieLens 1M: https://grouplens.org/datasets/movielens/1m/
 - PaddlePaddle: https://www.paddlepaddle.org.cn/
 - NCF论文: He, X., et al. (2017). Neural collaborative filtering. WWW.
+- SASRec论文: Kang, W., et al. (2018). Self-attentive sequential recommendation. ICDM.
