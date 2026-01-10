@@ -204,7 +204,13 @@ class RecommenderEvaluator:
 
 
 def evaluate_recommender(
-    model, test_data, all_items, use_features=True, use_poster=False
+    model,
+    test_data,
+    all_items,
+    use_features=True,
+    use_poster=False,
+    movie_features_all=None,
+    poster_features_all=None,
 ):
     """
     评估推荐模型
@@ -215,6 +221,8 @@ def evaluate_recommender(
         all_items: 所有物品ID列表
         use_features: 是否使用特征
         use_poster: 是否使用海报特征
+        movie_features_all: 所有电影特征矩阵 (n_movies, n_features) 或 None
+        poster_features_all: 所有电影海报特征矩阵 (n_movies, 2048) 或 None
 
     Returns:
         metrics: 评估指标字典
@@ -257,18 +265,19 @@ def evaluate_recommender(
             # 获取推荐列表
             for i in range(len(user_ids)):
                 user_idx = user_ids[i].item()
-                # 注意：movie_features_batch 只有 batch_size 个，不适用于所有电影的排名
-                # 这里简化处理，不使用电影特征进行 top-k 推荐
+                user_feature = None
+                if use_features and "user_feature" in batch:
+                    user_feature = batch["user_feature"][i].numpy()
                 user_recommended = get_top_k_recommendations(
                     model,
                     user_idx,
                     all_items,
                     k=10,
-                    use_features=False,  # 暂时不使用特征
-                    use_poster=False,
-                    user_feature=None,
-                    movie_features_batch=None,
-                    poster_features_batch=None,
+                    use_features=use_features and movie_features_all is not None,
+                    use_poster=use_poster and poster_features_all is not None,
+                    user_feature=user_feature,
+                    movie_features_all=movie_features_all,
+                    poster_features_all=poster_features_all,
                 )
                 recommended_items_list.append(user_recommended)
 
@@ -304,8 +313,8 @@ def get_top_k_recommendations(
     use_features=True,
     use_poster=False,
     user_feature=None,
-    movie_features_batch=None,
-    poster_features_batch=None,
+    movie_features_all=None,
+    poster_features_all=None,
 ):
     """
     获取用户的Top-K推荐列表
@@ -317,51 +326,69 @@ def get_top_k_recommendations(
         k: 推荐数量
         use_features: 是否使用特征
         use_poster: 是否使用海报特征
+        user_feature: 用户特征 (特征维度,)
+        movie_features_all: 所有电影特征 (n_movies, feature_dim) 或 None
+        poster_features_all: 所有电影海报特征 (n_movies, 2048) 或 None
 
     Returns:
         recommended_movie_idxs: 推荐的电影ID列表
     """
     model.eval()
 
+    # 检查特征是否完整（需要所有电影的特征）
+    features_available = (
+        use_features
+        and user_feature is not None
+        and movie_features_all is not None
+        and (not use_poster or poster_features_all is not None)
+    )
+
+    # 批量大小，避免一次性处理所有电影
+    batch_size = 256
+    all_preds = []
+
     with paddle.no_grad():
-        # 复制用户特征和电影特征用于batch推理
-        user_ids = paddle.full([len(all_movie_idxs)], user_idx, dtype="int64")
+        # 用户特征
+        if features_available:
+            user_features_base = paddle.to_tensor(user_feature).unsqueeze(0)
 
-        if use_features and user_feature is not None:
-            user_features = paddle.tile(
-                paddle.to_tensor(user_feature).unsqueeze(0), [len(all_movie_idxs), 1]
-            )
-        else:
-            user_features = None
+        # 分批处理
+        for i in range(0, len(all_movie_idxs), batch_size):
+            batch_end = min(i + batch_size, len(all_movie_idxs))
+            batch_movie_idxs = all_movie_idxs[i:batch_end]
+            batch_len = len(batch_movie_idxs)
 
-        # 预测
-        if (
-            use_features
-            and use_poster
-            and movie_features_batch is not None
-            and poster_features_batch is not None
-        ):
-            preds = model(
-                user_ids,
-                paddle.to_tensor(all_movie_idxs),
-                user_features,
-                movie_features_batch,
-                poster_features_batch,
-            )
-        elif use_features and movie_features_batch is not None:
-            preds = model(
-                user_ids,
-                paddle.to_tensor(all_movie_idxs),
-                user_features,
-                movie_features_batch,
-            )
-        else:
-            preds = model(user_ids, paddle.to_tensor(all_movie_idxs))
+            batch_user_ids = paddle.full([batch_len], user_idx, dtype="int64")
 
-        preds = preds.numpy().flatten()
+            if features_available:
+                batch_user_features = paddle.tile(user_features_base, [batch_len, 1])
+                batch_movie_features = paddle.to_tensor(movie_features_all[i:batch_end])
+
+                if use_poster and poster_features_all is not None:
+                    batch_poster_features = paddle.to_tensor(
+                        poster_features_all[i:batch_end]
+                    )
+                    preds = model(
+                        batch_user_ids,
+                        paddle.to_tensor(batch_movie_idxs),
+                        batch_user_features,
+                        batch_movie_features,
+                        batch_poster_features,
+                    )
+                else:
+                    preds = model(
+                        batch_user_ids,
+                        paddle.to_tensor(batch_movie_idxs),
+                        batch_user_features,
+                        batch_movie_features,
+                    )
+            else:
+                preds = model(batch_user_ids, paddle.to_tensor(batch_movie_idxs))
+
+            all_preds.extend(preds.numpy().flatten())
 
         # 获取top-k
-        top_k_indices = np.argsort(preds)[::-1][:k]
+        top_k_indices = np.argsort(np.array(all_preds))[::-1][:k]
         recommended_movie_idxs = [all_movie_idxs[i] for i in top_k_indices]
 
     return recommended_movie_idxs
