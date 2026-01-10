@@ -138,7 +138,7 @@ def train(args):
 
             pos_logits, neg_logits = model(seqs, pos, neg)
 
-            targets = (pos != 0).astype(dtype="int32")
+            targets = (pos != 0).astype(dtype="float32")
             loss = criterion(pos_logits, neg_logits, targets)
 
             if args.l2_emb > 0:
