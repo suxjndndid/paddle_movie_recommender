@@ -196,17 +196,60 @@ class MovieRecommender:
             self.movie_similarity_matrix = {}
 
     def load_model(self, model_path):
-        """加载训练好的NCF模型"""
+        """加载训练好的NCF模型（自适应超参）"""
         print(f"加载NCF模型: {model_path}")
+
+        model_state = paddle.load(model_path)
+
+        # 从保存的模型权重推断维度
+        gmf_weight_shape = model_state.get(
+            "gmf.item_embed.weight", model_state.get("gmf.user_embed.weight")
+        ).shape
+        gmf_embed_dim = gmf_weight_shape[1] if len(gmf_weight_shape) > 1 else 32
+
+        mlp_weight_shape = model_state.get(
+            "mlp.mlp.0.weight", model_state.get("mlp.user_embed.weight")
+        ).shape
+        mlp_embed_dim = mlp_weight_shape[1] if len(mlp_weight_shape) > 1 else 32
+
+        fusion_weight_shape = model_state.get("fusion.0.weight")
+        fusion_input_dim = (
+            fusion_weight_shape.shape[0] if fusion_weight_shape is not None else 40
+        )
+
+        # 计算特征维度
+        mlp_layers = [64, 32, 16]
+        mlp_output_dim = mlp_layers[-1]
+        gmf_output_dim = 1
+
+        base_dim = gmf_output_dim + mlp_output_dim
+
+        if self.use_features and self.use_poster:
+            num_features = fusion_input_dim - base_dim - 2048
+        elif self.use_features:
+            num_features = fusion_input_dim - base_dim
+        elif self.use_poster:
+            num_features = fusion_input_dim - base_dim - 2048
+        else:
+            num_features = 0
+
+        num_movie_features = num_features - 4  # 减去用户特征4维
+
+        print(
+            f"  自适应维度: gmf_embed={gmf_embed_dim}, mlp_embed={mlp_embed_dim}, movie_features={num_movie_features}"
+        )
 
         self.model = NCF(
             num_users=self.n_users,
             num_items=self.n_movies,
+            gmf_embed_dim=gmf_embed_dim,
+            mlp_embed_dim=mlp_embed_dim,
             use_features=self.use_features,
             use_poster=self.use_poster,
+            num_user_features=4,
+            num_movie_features=max(num_movie_features, 19),
         )
 
-        model_state = paddle.load(model_path)
         self.model.set_state_dict(model_state)
         self.model.eval()
 
