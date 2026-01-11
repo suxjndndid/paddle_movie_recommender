@@ -686,23 +686,26 @@ class MovieRecommender:
         user_sim_recs = []
         movie_sim_recs = []
 
+        candidate_multiplier = 3  # 候选倍数，确保去重后有足够结果
+        candidate_n = n * candidate_multiplier
+
         if self.model is not None:
-            model_recs = self._recommend_by_model(user_id, n)
+            model_recs = self._recommend_by_model(user_id, candidate_n)
         else:
             print("  提示: NCF模型未加载")
 
         if self.sasrec_model is not None:
-            sasrec_recs = self._recommend_by_sasrec(user_id, n)
+            sasrec_recs = self._recommend_by_sasrec(user_id, candidate_n)
         else:
             print("  提示: SASRec模型未加载")
 
         if self.user_similarity_matrix:
-            user_sim_recs = self._recommend_by_similar_users(user_id, n)
+            user_sim_recs = self._recommend_by_similar_users(user_id, candidate_n)
         else:
             print("  提示: 用户相似度矩阵未加载")
 
         if self.movie_similarity_matrix:
-            movie_sim_recs = self._recommend_by_similar_movies(user_id, n)
+            movie_sim_recs = self._recommend_by_similar_movies(user_id, candidate_n)
         else:
             print("  提示: 电影相似度矩阵未加载")
 
