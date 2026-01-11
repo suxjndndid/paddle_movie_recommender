@@ -273,13 +273,14 @@ class MovieRecommender:
             // hidden_units
         )
         dropout_rate = 0.5
+        trained_item_num = model_state["item_emb.weight"].shape[0] - 1  # 减去padding
 
         print(
-            f"  自适应超参: hidden_units={hidden_units}, max_len={max_len}, num_heads={num_heads}"
+            f"  自适应超参: hidden_units={hidden_units}, max_len={max_len}, num_heads={num_heads}, item_num={trained_item_num}"
         )
 
         self.sasrec_model = SASRec(
-            item_num=self.n_movies,
+            item_num=trained_item_num,
             max_len=max_len,
             hidden_units=hidden_units,
             num_heads=num_heads,
