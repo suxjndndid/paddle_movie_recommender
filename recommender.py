@@ -13,6 +13,8 @@ import pickle
 import numpy as np
 import pandas as pd
 import paddle
+
+paddle.set_device("cpu")
 from tqdm import tqdm
 
 # 添加当前目录到路径
