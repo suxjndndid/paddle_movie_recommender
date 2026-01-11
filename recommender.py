@@ -117,6 +117,7 @@ class MovieRecommender:
         # 统计信息
         self.n_users = len(self.user_id_map) + 1
         self.n_movies = len(self.movie_id_map) + 1
+        self.max_movie_id = max(self.movies["movie_id"]) if len(self.movies) > 0 else 0
 
         # 加载用户特征
         self.user_features = {}
@@ -273,7 +274,7 @@ class MovieRecommender:
             // hidden_units
         )
         dropout_rate = 0.5
-        trained_item_num = model_state["item_emb.weight"].shape[0] - 1  # 减去padding
+        trained_item_num = model_state["item_emb.weight"].shape[0] - 1
 
         print(
             f"  自适应超参: hidden_units={hidden_units}, max_len={max_len}, num_heads={num_heads}, item_num={trained_item_num}"
