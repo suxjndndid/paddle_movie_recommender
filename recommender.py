@@ -14,7 +14,6 @@ import numpy as np
 import pandas as pd
 import paddle
 
-paddle.set_device("cpu")
 from tqdm import tqdm
 
 # 添加当前目录到路径
@@ -813,7 +812,10 @@ def main():
         "--sasrec_model_path", type=str, default=None, help="SASRec模型文件路径"
     )
     parser.add_argument("--use_poster", action="store_true", help="是否使用海报特征")
+    parser.add_argument("--device", type=str, default="gpu", help="运行设备 (cpu/gpu)")
     args = parser.parse_args()
+
+    paddle.set_device(args.device)
 
     # 如果未指定data_dir，使用脚本所在目录
     if args.data_dir is None:
