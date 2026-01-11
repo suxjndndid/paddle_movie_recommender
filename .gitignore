@@ -27,3 +27,9 @@ ENV/
 posters/
 data/ml-1m/
 data/processed/*.pkl
+data/processed/*.txt
+models/__pycache__/
+data/__pycache__/
+evaluation/__pycache__/
+scripts/__pycache__/
+*.log
