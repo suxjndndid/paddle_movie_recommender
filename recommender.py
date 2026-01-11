@@ -837,7 +837,11 @@ def main():
     sasrec_model_path = (
         args.sasrec_model_path
         if args.sasrec_model_path
-        else os.path.join(data_dir, "models", "SASRec_best.pth.tar")
+        else os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "models",
+            "SASRec_best.pth.tar",
+        )
     )
 
     print("=" * 60)
