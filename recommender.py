@@ -843,6 +843,8 @@ def main():
             "SASRec_best.pth.tar",
         )
     )
+    print(f"  SASRec模型路径: {sasrec_model_path}")
+    print(f"  SASRec模型存在: {os.path.exists(sasrec_model_path)}")
 
     print("=" * 60)
     print("电影推荐系统 - SASRec集成测试")
