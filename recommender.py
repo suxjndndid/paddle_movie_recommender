@@ -221,7 +221,13 @@ class MovieRecommender:
             dropout_rate=0.5,
         )
 
-        model_state = paddle.load(model_path)
+        checkpoint = paddle.load(model_path)
+        if isinstance(checkpoint, dict) and "state_dict" in checkpoint:
+            model_state = checkpoint["state_dict"]
+            print(f"  从checkpoint加载，epoch: {checkpoint.get('epoch', 'N/A')}")
+        else:
+            model_state = checkpoint
+
         self.sasrec_model.set_state_dict(model_state)
         self.sasrec_model.eval()
 
